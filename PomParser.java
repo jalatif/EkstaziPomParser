@@ -29,9 +29,10 @@ public class PomParser {
 
     public static void main(String args[]) {
 
-        String path = "/home/manshu/Templates/EXEs/CS527SE/Homework/hw7/temp_ekstazi/continuum";
+        String path = "/home/manshu/Templates/EXEs/CS527SE/Homework/hw7/chukwa-ekstazi";
+        path = "/home/manshu/Templates/EXEs/CS527SE/Homework/hw7/temp_ekstazi/guava/guava-tests";
 
-        String ek_version = "3.4.2";
+        String ek_version = "4.1.0";
 
         if (args.length > 0)
             path = args[0];
@@ -62,6 +63,11 @@ public class PomParser {
         configuration_node.appendChild(excElement);
     }
 
+    private void addSureFireVersion(Node surefire_node){
+        Element versionNode = doc.createElement("version");
+        versionNode.appendChild(doc.createTextNode("2.13"));
+        surefire_node.appendChild(versionNode);
+    }
     private void insertDependency(Node node){
 
         Element dInsert0 = doc.createElement("dependency");
@@ -135,6 +141,11 @@ public class PomParser {
         return node;
     }
 
+    private String getNodeValue(String search_expression) throws XPathException {
+        String node_val = (String) xpath.evaluate(search_expression, doc, XPathConstants.STRING);
+        return node_val;
+    }
+
     private NodeList getNodeList(String search_expression) throws XPathException {
         NodeList nodelist = (NodeList) xpath.evaluate(search_expression, doc, XPathConstants.NODESET);
         return nodelist;
@@ -150,7 +161,7 @@ public class PomParser {
             transformer = tFactory.newTransformer();
             transformer.setOutputProperty(OutputKeys.INDENT, "yes");
             transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-            transformer.setOutputProperty(OutputKeys.ENCODING, "US-ASCII");
+            //transformer.setOutputProperty(OutputKeys.ENCODING, "US-ASCII");
             //transformer.setErrorListener(OutputKeys.);
             // transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
             doc.setXmlStandalone(true);
@@ -182,16 +193,49 @@ public class PomParser {
         NodeList surefire_plugin = nodes;
         System.out.print("Surefire : " + (nodes.getLength() != 0) + " ");
 
-        NodeList ekstazi_plugin = getNodeList("/project/build//plugin[artifactId[contains(text(), 'ekstazi-maven-plugin')]]/artifactId/text()");
+        NodeList ekstazi_plugin = (NodeList) getNodeList("/project/build//plugin[artifactId[contains(text(), 'ekstazi-maven-plugin')]]/artifactId/text()");
         System.out.print(" Ekstazi Plugin Present : " + (ekstazi_plugin.getLength() != 0) + ", ");
 
+        Node surefire_node = getNode("/project/build//plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]");
+        if (surefire_node != null){
+            String surefire_version = getNodeValue("/project/build//plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/version");
+            if (!surefire_version.equals("")){
+                double version = Double.parseDouble(surefire_version);
+                if (version <= 2.10){
+                    System.out.println("\nVersion not supported = " + surefire_version);
+                    Node version_node = getNode("/project/build//plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/version");
+                    version_node.setTextContent("2.13");
+                    System.out.println("Surfire version upgraded to 2.13");
+                }else{
+                    System.out.println("\nVersion Supported = " + surefire_version);
+                }
+            }
+            else
+                addSureFireVersion(surefire_node);
+        }
+        NodeList argline_nodes = getNodeList("/project/build//plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]//argLine");
+        Node argline_node = null;
+        for (int i = 0; i < argline_nodes.getLength(); i++) {
+            argline_node = argline_nodes.item(i);
+            if (argline_node != null) {
+                System.out.println("ArgLine present in this one");
+                String argText = argline_node.getTextContent();
+                if (!argText.contains("${argLine}")) {
+                    argline_node.setTextContent("${argLine} " + argText);
+                    System.out.println("Now argLine content = " + argline_node.getTextContent());
+                } else
+                    System.out.println("No change required");
+
+            } else {
+                System.out.println("ArgLine not present");
+            }
+        }
         //Adding Ekstazi Plugin
         if (nodes.getLength() != 0 && ekstazi_plugin.getLength() == 0) {
             //expr = xpath.compile("count(/project/build//plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/artifactId/parent::*/preceding-sibling::*) + 1");
             //result = expr.evaluate(doc, XPathConstants.NUMBER);
             //System.out.print("at plugin number : " + result + ", ");
 
-            Node surefire_node = getNode("/project/build//plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]");
             insertPlugin(surefire_node);
         }
 
@@ -226,7 +270,7 @@ public class PomParser {
 
         if(surefire_plugin.getLength() != 0 && excludes_configuration.getLength() == 0)
         {
-            Node surefire_node = getNode("/project/build//plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]");
+            surefire_node = getNode("/project/build//plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]");
             Node artifactId = getNode("/project/build//plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/artifactId");
             Element configuration = doc.createElement("configuration");
             surefire_node.insertBefore(configuration,artifactId.getNextSibling());
