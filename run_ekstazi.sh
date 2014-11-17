@@ -51,6 +51,8 @@ surefire_check=$(awk 'BEGIN{ print "'${surefire_version}'"=="0.0" }')
 #echo "Surefire Version"
 #echo $surefire_check
 
+clone_project_dir=".${project}_clone"
+echo $clone_project_dir
 echo $project_url
 echo $project
 echo $version
@@ -72,7 +74,7 @@ rm -rf ${default_location}
 # 	version=$3
 # fi
 
-if [ ! -d "${project}" ]; then
+if [ ! -d "${clone_project_dir}" ]; then
 
 	protocol=`echo $project_url | cut -d':' -f 2`
 	git_project_url="git:${protocol}"
@@ -92,8 +94,11 @@ if [ ! -d "${project}" ]; then
 		echo "Try if it's an svn project"
 		svn co ${project_url} ${project}
 	fi
+	cp -r ${project} ${clone_project_dir}
 else
-	rm -rf ${project}/.ekstazi
+	rm -rf ${project}
+	cp -r ${clone_project_dir} ${project}
+	#	rm -rf ${project}/.ekstazi
 fi
 
 ## Check if clone was good
@@ -104,14 +109,14 @@ fi
 
 cd ${project}
 
-rm -rf pom.xml
-
-if [ $git_project -eq "0" ]; then
-	git checkout pom.xml
-	git checkout
-else	
-	svn up
-fi
+#rm -rf pom.xml
+#
+#if [ $git_project -eq "0" ]; then
+#	git checkout pom.xml
+#	git checkout
+#else	
+#	svn up
+#fi
 
 # Download Ekstazi
 # url="mir.cs.illinois.edu/gliga/projects/ekstazi/release/"
@@ -138,9 +143,6 @@ do
 		java -jar ${cwd}/pom_parser.jar "${cwd}/${project}" "${version}" "${surefire_version}" 	
 	fi
     
-	find ./ -iname "*pom.xml*" -exec sed -i 's/^\s*<argLine/<\!-- <argLine/g' {} \;
-	find ./ -iname "*pom.xml*" -exec sed -i 's/<\/argLine>\s*$/<\/argLine> -->/g' {} \;
-
 	${cwd}/test_ekstazi.sh .
 
 done
