@@ -4,9 +4,9 @@ cd $1
 
 rm -rf .ekstazi/
 
-trun1=`mvn test | tee /dev/tty | awk '/Results :/{y=1;next}y'| grep -i "Tests run: " | awk '{print $3}' | cut -d',' -f 1`
+trun1=`mvn test -fae | tee /dev/tty | awk '/Results :/{y=1;next}y'| grep -i "Tests run: " | awk '{print $3}' | cut -d',' -f 1`
 
-trun2=`mvn test | tee /dev/tty | awk '/Results :/{y=1;next}y'| grep -i "Tests run: " | awk '{print $3}' | cut -d',' -f 1`
+trun2=`mvn test -fae | tee /dev/tty | awk '/Results :/{y=1;next}y'| grep -i "Tests run: " | awk '{print $3}' | cut -d',' -f 1`
 
 if [ -z "$trun1" ]
 then
