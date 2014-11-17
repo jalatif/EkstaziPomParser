@@ -15,8 +15,9 @@ version="4.2.0"
 git_project="0"
 surefire_version="0.0"
 modules="."
+clean_all="false"
 
-while getopts ":u:p:v:s:m:h" opt; do
+while getopts ":u:p:v:s:m:c:h" opt; do
   case $opt in
   	u)
       #echo "-url was triggered! Parameter: ${OPTARG}" >&2
@@ -38,14 +39,28 @@ while getopts ":u:p:v:s:m:h" opt; do
    	  #echo "-modules was triggered! Parameter: ${OPTARG}" >&2
    	  modules=(${OPTARG//,/ })
       ;; 
+	c)
+	  clean_all=${OPTARG}
+	  ;;
     h)
-	  echo "help-> ./run_ekstazi.sh -u [svn/git project url] -p [local_project_folder_name] -v [ekstazi_version] -s [forced_surefire_version] -m [modules separated by ,]" >&2
+	  echo "help-> ./run_ekstazi.sh -u [svn/git project url] -p [local_project_folder_name] -v [ekstazi_version] -s [forced_surefire_version] -m [modules separated by ,] -c [true/false to clean local cloned projects]" >&2
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
       ;;
   esac
 done
+
+if [ "$clean_all" == "true" ]; then
+	pclones=`ls -la ${cwd} | grep ".*_clone" | awk '{print $9}'`
+	echo $pclones
+	for fclone in ${pclone}; do
+		pfolder=`echo "${fclone}" | sed -e 's/^\.//g' | sed -e 's/_clone//g'`
+		echo $fclone
+		echo $pfolder
+	done
+	exit 1;
+fi
 
 surefire_check=$(awk 'BEGIN{ print "'${surefire_version}'"=="0.0" }')
 #echo "Surefire Version"
@@ -85,6 +100,8 @@ if [ ! -d "${clone_project_dir}" ]; then
 	if [ $git_project -ne "0" ]; then 
 		git_project=`timeout 5 git ls-remote $git_project_url | wc -l | tail -1 | awk '{if ($1 > 0) {print "0"} else {print "1"}}'`
 	fi
+
+	rm -rf ${project}
 
 	if [ $git_project -eq "0" ]; then
 		echo "A Git project"
