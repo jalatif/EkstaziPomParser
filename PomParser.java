@@ -33,7 +33,7 @@ public class PomParser {
         path = "/home/manshu/Templates/EXEs/CS527SE/Homework/hw7/temp_ekstazi/cucumber/needle";
 
         String ek_version = "4.2.0";
-        String surefire_version = "2.18";
+        String surefire_version = "2.13";
         boolean surefire_force = false;
 
         if (args.length > 0)
@@ -160,11 +160,17 @@ public class PomParser {
         toInsert.appendChild(exsInsert);
         exsInsert.appendChild(exInsert);
         exInsert.appendChild(idInsert);
-        idInsert.appendChild(doc.createTextNode("select"));
+        if (ekstazi_version.startsWith("3"))
+            idInsert.appendChild(doc.createTextNode("selection"));
+        else
+            idInsert.appendChild(doc.createTextNode("select"));
         exInsert.appendChild(goalsInsert);
         goalsInsert.appendChild(goalInsert);
         goalsInsert.appendChild(goalInsert2);
-        goalInsert.appendChild(doc.createTextNode("select"));
+        if (ekstazi_version.startsWith("3"))
+            goalInsert.appendChild(doc.createTextNode("selection"));
+        else
+            goalInsert.appendChild(doc.createTextNode("select"));
         goalInsert2.appendChild(doc.createTextNode("restore"));
 
         surefire_node.getParentNode().insertBefore(toInsert, surefire_node);
@@ -275,10 +281,10 @@ public class PomParser {
                     //if (version <= 2.10 || version > 2.2) {
                     if (!surefire_force){
                         if (version < 2.13) {
-                            System.out.println("\nVersion not supported = " + surefire_version);
+                            System.out.println("\nVersion not supported = " + surefire_new_version);
                             Node version_node = getNode("/project/build//plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/version");
-                            version_node.setTextContent("2.18");
-                            System.out.println("Surfire version upgraded to 2.18");
+                            version_node.setTextContent(surefire_version);
+                            System.out.println("Surfire version upgraded to " + surefire_new_version);
                         } else {
                             System.out.println("\nVersion Supported = " + surefire_version);
                         }
@@ -291,7 +297,13 @@ public class PomParser {
                 }
                 catch(NumberFormatException ex)
                 {
-                    //Do Nothing
+                    if (surefire_force) {
+                        System.out.println("\nPrevious Version = " + surefire_version);
+                        Node version_node = getNode("/project/build//plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/version");
+                        version_node.setTextContent(surefire_new_version);
+                        System.out.println("Surefire version forcefully upgraded to " + surefire_new_version);
+                    }
+
                 }
             }
             else

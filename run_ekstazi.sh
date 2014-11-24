@@ -16,8 +16,9 @@ git_project="0"
 surefire_version="0.0"
 modules="."
 clean_all="false"
+project_revision="0"
 
-while getopts ":u:p:v:s:m:c:h" opt; do
+while getopts ":u:p:v:s:m:r:c:h" opt; do
   case $opt in
   	u)
       #echo "-url was triggered! Parameter: ${OPTARG}" >&2
@@ -39,11 +40,14 @@ while getopts ":u:p:v:s:m:c:h" opt; do
    	  #echo "-modules was triggered! Parameter: ${OPTARG}" >&2
    	  modules=(${OPTARG//,/ })
       ;; 
+	r)
+	  project_revision="${OPTARG}"
+	  ;;
 	c)
 	  clean_all=${OPTARG}
 	  ;;
     h)
-	  echo "help-> ./run_ekstazi.sh -u [svn/git project url] -p [local_project_folder_name] -v [ekstazi_version] -s [forced_surefire_version] -m [modules separated by ,] -c [true/false to clean local cloned projects]" >&2
+	  echo "help-> ./run_ekstazi.sh -u [svn/git project url] -p [local_project_folder_name] -v [ekstazi_version] -s [forced_surefire_version] -m [modules separated by ,] -r [revision/otherwise latest] -c [true/false to clean local cloned projects]" >&2
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -81,25 +85,18 @@ echo ''
 
 rm -rf ${default_location}
 
-# if [ ! -z "$2" ]; then
-# 	project=$2
-# fi
 
-# if [ ! -z "$3" ]; then
-# 	version=$3
-# fi
+protocol=`echo $project_url | cut -d':' -f 2`
+git_project_url="git:${protocol}"
+#echo $protocol
+#echo $git_project_url
+git_project=`timeout 5 git ls-remote $project_url 2> /dev/null | wc -l | tail -1 | awk '{if ($1 > 0) {print "0"} else {print "1"}}'`
+
+if [ $git_project -ne "0" ]; then 
+	git_project=`timeout 5 git ls-remote $git_project_url 2> /dev/null | wc -l | tail -1 | awk '{if ($1 > 0) {print "0"} else {print "1"}}'`
+fi
 
 if [ ! -d "${clone_project_dir}" ]; then
-
-	protocol=`echo $project_url | cut -d':' -f 2`
-	git_project_url="git:${protocol}"
-	#echo $protocol
-	#echo $git_project_url
-	git_project=`timeout 5 git ls-remote $project_url| wc -l | tail -1 | awk '{if ($1 > 0) {print "0"} else {print "1"}}'`
-
-	if [ $git_project -ne "0" ]; then 
-		git_project=`timeout 5 git ls-remote $git_project_url | wc -l | tail -1 | awk '{if ($1 > 0) {print "0"} else {print "1"}}'`
-	fi
 
 	rm -rf ${project}
 
@@ -125,6 +122,22 @@ if [ ! -d "${project}" ]; then
 fi
 
 cd ${project}
+
+if [ "$project_revision" != "0" ]; then
+	echo "Changing revision to $project_revision"
+	if [ $git_project -eq "0" ]; then
+		git checkout $project_revision
+	else
+		svn up -r"${project_revision}"
+	fi
+else
+	echo "Using latest revision"
+	if [ $git_project -eq "0" ]; then
+		git checkout
+	else
+		svn up
+	fi
+fi
 
 #rm -rf pom.xml
 #
