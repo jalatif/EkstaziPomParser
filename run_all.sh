@@ -25,6 +25,9 @@ cd ${dir_name}
 chmod +x *.sh
 
 ./run_ekstazi.sh -u "https://github.com/JodaOrg/joda-time.git" -p "joda"
+checkKey "$response"
+
+./run_ekstazi.sh -u "http://svn.apache.org/repos/asf/commons/proper/lang/trunk" -p "commons-lang"
 read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
 checkKey "$response"
 
@@ -36,8 +39,11 @@ checkKey "$response"
 read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
 checkKey "$response"
 
-./run_ekstazi.sh -u "https://github.com/google/closure-compiler.git" -p "closure"
+./run_ekstazi.sh -u "http://svn.apache.org/repos/asf/commons/proper/configuration/trunk" -p "commons-config"
+read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
+checkKey "$response"
 
+./run_ekstazi.sh -u "https://github.com/google/closure-compiler.git" -p "closure"
 read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
 checkKey "$response"
 
@@ -62,6 +68,23 @@ checkKey "$response"
 patch run_ekstazi.sh < patch_log4j.txt
 ./run_ekstazi.sh -u "http://svn.apache.org/repos/asf/logging/log4j/trunk/" -p "log4j" -v "4.2.0" -s "2.15"
 patch -R run_ekstazi.sh < patch_log4j.txt
+read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
+checkKey "$response"
+
+
+./run_ekstazi.sh -u "http://svn.apache.org/repos/asf/commons/proper/pool/trunk" -p "pool"
+read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
+checkKey "$response"
+
+./run_ekstazi.sh -u "https://github.com/zxing/zxing.git"  -p "zxing" -s "2.18"
+read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
+checkKey "$response"
+
+./run_ekstazi.sh -u "https://github.com/apache/phoenix"  -p "phoenix" -s "2.16"
+read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
+checkKey "$response"
+
+./run_ekstazi.sh -u "http://svn.apache.org/repos/asf/gora/trunk/" -p "gora" -s "2.15"
 read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
 checkKey "$response"
 
