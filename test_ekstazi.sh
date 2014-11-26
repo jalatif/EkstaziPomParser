@@ -46,26 +46,30 @@ for ekFolder in ${ek_folders}; do
 done
 
 
-IFS=', ' read -a tests_array <<< "$trun1"
-trun1=0
-for element in "${tests_array[@]}"
+strun1=0
+#IFS=', ' read -a tests_array <<< "$trun1"
+#for element in "${tests_array[@]}"
+for element in ${trun1//\s/ } ;
 do
-	trun1=$(( $trun1 + $element ))
+	strun1=$(( $strun1 + $element ))
 done
+trun1=$strun1
 
-IFS=', ' read -a ek_tests_array <<< "$trun2"
-trun2=0
-for element in "${ek_tests_array[@]}"
+strun2=0
+#IFS=', ' read -a ek_tests_array <<< "$trun2"
+#for element in "${ek_tests_array[@]}"
+for element in ${trun2//\s/ } ;
 do
-	trun2=$(( $trun2 + $element ))
+	strun2=$(( $strun2 + $element ))
 done
+trun2=$strun2
 
 time_diff=$(($t2-$t1))
 time_diff2=$(($t3-$t2))
 
 echo ""
 echo "Time taken for first run = $(($time_diff / 60)) minutes and $(($time_diff % 60)) seconds."
-echo "Time taken for first run = $(($time_diff2 / 60)) minutes and $(($time_diff2 % 60)) seconds."
+echo "Time taken for second run = $(($time_diff2 / 60)) minutes and $(($time_diff2 % 60)) seconds."
 
 
 echo ""

@@ -3,8 +3,8 @@
 cwd=`pwd`
 
 if [ -z "$1" ]; then
-	echo "No argument supplied. Please run the program as ./run_ekstazi.sh {git|svn}_project_url [local_folder_name] [ekstazi_version]"
-	echo "Arguments in [] are optional."
+	  echo "help-> ./run_ekstazi.sh -u [svn/git project url] -p [local_project_folder_name] -v [ekstazi_version] -s [forced_surefire_version] -m [modules separated by ,] -r [revision/otherwise latest] -c [true/false to clean local cloned projects] -d [max_depth_allowed_for_pom_change]" >&2
+	echo "Arguments except -u and -p are optional."
 	exit 0
 fi
 
@@ -17,8 +17,9 @@ surefire_version="0.0"
 modules="."
 clean_all="false"
 project_revision="0"
+max_depth="-1"
 
-while getopts ":u:p:v:s:m:r:c:h" opt; do
+while getopts ":u:p:v:s:m:r:d:c:h" opt; do
   case $opt in
   	u)
       #echo "-url was triggered! Parameter: ${OPTARG}" >&2
@@ -43,11 +44,14 @@ while getopts ":u:p:v:s:m:r:c:h" opt; do
 	r)
 	  project_revision="${OPTARG}"
 	  ;;
+	d)
+	  max_depth="${OPTARG}"
+      ;;
 	c)
 	  clean_all=${OPTARG}
 	  ;;
     h)
-	  echo "help-> ./run_ekstazi.sh -u [svn/git project url] -p [local_project_folder_name] -v [ekstazi_version] -s [forced_surefire_version] -m [modules separated by ,] -r [revision/otherwise latest] -c [true/false to clean local cloned projects]" >&2
+	  echo "help-> ./run_ekstazi.sh -u [svn/git project url] -p [local_project_folder_name] -v [ekstazi_version] -s [forced_surefire_version] -m [modules separated by ,] -r [revision/otherwise latest] -c [true/false to clean local cloned projects] -d [max_depth_allowed_for_pom_change]" >&2
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -75,17 +79,27 @@ surefire_check=$(awk 'BEGIN{ print "'${surefire_version}'"=="0.0" }')
 #echo $surefire_check
 
 clone_project_dir=".${project}_clone"
-echo $clone_project_dir
-echo $project_url
-echo $project
-echo $version
-echo $surefire_version
 
+echo "Settings of the ekstazi pom parser"
+echo "=================================="
+#echo $clone_project_dir
+echo "Url of the project = $project_url"
+echo "Folder of the project = $project"
+echo "Using Ekstazi Version = $version"
+if [ $surefire_check -eq "1" ]; then
+	echo "Using default surefire version"
+else
+	echo "Using Surefire Version = $surefire_version"
+fi
+echo "Depth of run = $max_depth"
+
+echo -n "Running on modules = "
 for index in "${!modules[@]}"
 do
     echo -n "${modules[index]},"
 done
 echo ''
+echo "================================="
 
 rm -rf ${default_location}
 
@@ -110,9 +124,9 @@ if [ ! -d "${clone_project_dir}" ]; then
 	else
 		echo "Not a git project"
 		echo "Try if it's an svn project"
-		svn co ${project_url} ${project}
+		svn co ${project_url} ${project} 2> /dev/null
 	fi
-	cp -r ${project} ${clone_project_dir}
+	cp -r ${project} ${clone_project_dir} 2> /dev/null
 else
 	rm -rf ${project}
 	cp -r ${clone_project_dir} ${project}
@@ -121,7 +135,7 @@ fi
 
 ## Check if clone was good
 if [ ! -d "${project}" ]; then
-       echo "Nothing was cloned. Check if the url is valid git or svn url."
+       echo "Nothing was cloned. Check network connection or check if the url is valid git or svn url."
        exit 1
 fi
 
@@ -167,17 +181,21 @@ mvn install -DskipTests
 for index in "${!modules[@]}"
 
 do
-	echo "In project ${modules[index]},"
+	echo "In Module ${modules[index]},"
 	
-	cd ${modules[index]}
+	cd ${cwd}/${project}/${modules[index]}
+	
+	#echo "${cwd}/${project}/${modules[$index]}" 
 	
 	if [ $surefire_check -eq "1" ]; then
-		java -jar ${cwd}/pom_parser.jar "${cwd}/${project}" "${version}" 	
+		java -jar ${cwd}/pom_parser.jar "${cwd}/${project}/${modules[$index]}" "${max_depth}" "${version}"	
 	else
-		java -jar ${cwd}/pom_parser.jar "${cwd}/${project}" "${version}" "${surefire_version}" 	
+		java -jar ${cwd}/pom_parser.jar "${cwd}/${project}/${modules[$index]}" "${max_depth}" "${version}" "${surefire_version}" 	
 	fi
     
-	${cwd}/test_ekstazi.sh .
+	${cwd}/test_ekstazi.sh "${cwd}/${project}/${modules[$index]}"
+	
+	cd ${cwd}/${project}
 
 done
 
