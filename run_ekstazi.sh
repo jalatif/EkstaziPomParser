@@ -56,13 +56,17 @@ while getopts ":u:p:v:s:m:r:c:h" opt; do
 done
 
 if [ "$clean_all" == "true" ]; then
-	pclones=`ls -la ${cwd} | grep ".*_clone" | awk '{print $9}'`
-	echo $pclones
-	for fclone in ${pclone}; do
-		pfolder=`echo "${fclone}" | sed -e 's/^\.//g' | sed -e 's/_clone//g'`
-		echo $fclone
-		echo $pfolder
+	pnames=`find ./ -maxdepth 1 -type d -iname ".*_clone" | sed -e "s/^[.][/][.]//"  | sed -e "s/_clone$//"`
+	for pname in $pnames; do
+		echo -n "Deleting project folder and configurations: "
+		rm -rvf ".${pname}_clone"
+		rm -rvf ${pname}
 	done
+	exit 0;
+fi
+
+if [ "$project_url" == "" ]; then
+	echo "Please mention url of a project to begin"
 	exit 1;
 fi
 

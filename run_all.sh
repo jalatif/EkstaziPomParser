@@ -24,7 +24,11 @@ cd ${dir_name}
 
 chmod +x *.sh
 
+read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
+checkKey "$response"
+
 ./run_ekstazi.sh -u "https://github.com/JodaOrg/joda-time.git" -p "joda"
+read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
 checkKey "$response"
 
 ./run_ekstazi.sh -u "http://svn.apache.org/repos/asf/commons/proper/lang/trunk" -p "commons-lang"
@@ -88,6 +92,15 @@ checkKey "$response"
 read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
 checkKey "$response"
 
+patch run_ekstazi.sh < patch_gs.txt
+./run_ekstazi.sh -u "https://github.com/goldmansachs/gs-collections.git" -p "gsachs" -s "2.15" -v "3.4.2" -m "collections-testutils,gs-collections-code-generator,jmh-scala-tests,jmh-tests,gs-collections-code-generator-ant,gs-collections-code-generator-maven-plugin,collections-api,gs-collections-forkjoin,serialization-tests,memory-tests"
+patch -R run_ekstazi.sh < patch_gs.txt
+read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
+checkKey "$response"
+
+./run_ekstazi.sh -u "http://svn.apache.org/repos/asf/chukwa/trunk/" -p "chukwa" -s "2.13"
+read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
+checkKey "$response"
 
 ################ List of Other Projects Not Supported #########################
 ################ You can uncomment these lines to run these projects
