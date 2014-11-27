@@ -2,23 +2,37 @@
 
 cd $1
 
+cwd=`pwd`
+
+tfile1=".ekstazi_mvn_run_t1"
+tfile2=".ekstazi_mvn_run_t2"
+
+
 find ./ -iname ".ekstazi" -exec rm -rf {} \;
 
 
 t1=$(date +"%s")
 
-trun1=`mvn test -fae | tee /dev/tty | awk '/Results :/{y=1;next}y'| grep -i "Tests run: " | awk '{print $3}' | cut -d',' -f 1`
+mvn test -fae | tee ${tfile1}
+
+trun1=`awk '/Results :/{y=1;next}y' ${tfile1} | grep -i "Tests run: " | awk '{print $3}' | cut -d',' -f 1`
+
+rm -rf ${tfile1}
 
 t2=$(date +"%s")
 
-trun2=`mvn test -fae | tee /dev/tty | awk '/Results :/{y=1;next}y'| grep -i "Tests run: " | awk '{print $3}' | cut -d',' -f 1`
+mvn test -fae | tee ${tfile2}
+
+trun2=`awk '/Results :/{y=1;next}y' ${tfile2} | grep -i "Tests run: " | awk '{print $3}' | cut -d',' -f 1`
+
+rm -rf ${tfile2}
 
 t3=$(date +"%s")
 
 if [ -z "$trun1" ]
 then
 	trun1=0
-	echo "Some problem in running tests"
+	echo "Some problem in running tests" 
 	exit 0
 fi
 

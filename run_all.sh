@@ -47,7 +47,7 @@ checkKey "$response"
 read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
 checkKey "$response"
 
-./run_ekstazi.sh -u "https://github.com/google/closure-compiler.git" -p "closure"
+./run_ekstazi.sh -u "https://github.com/google/closure-compiler.git" -p "closure" -d "1"
 read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
 checkKey "$response"
 
@@ -65,7 +65,7 @@ patch -R run_ekstazi.sh < patch_jgit.txt
 read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
 checkKey "$response"
 
-./run_ekstazi.sh -u "https://github.com/netty/netty/" -p "netty" -s "2.15"
+./run_ekstazi.sh -u "https://github.com/netty/netty/" -p "netty" -s "2.15" -d "1"
 read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
 checkKey "$response"
 
@@ -93,14 +93,20 @@ read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N
 checkKey "$response"
 
 patch run_ekstazi.sh < patch_gs.txt
-./run_ekstazi.sh -u "https://github.com/goldmansachs/gs-collections.git" -p "gsachs" -s "2.15" -v "3.4.2" -m "collections-testutils,gs-collections-code-generator,jmh-scala-tests,jmh-tests,gs-collections-code-generator-ant,gs-collections-code-generator-maven-plugin,collections-api,gs-collections-forkjoin,serialization-tests,memory-tests"
+./run_ekstazi.sh -u "https://github.com/goldmansachs/gs-collections.git" -p "gsachs" -s "2.15" -v "3.4.2"
+#./run_ekstazi.sh -u "https://github.com/goldmansachs/gs-collections.git" -p "gsachs" -s "2.15" -v "3.4.2" -m "collections-testutils,gs-collections-code-generator,jmh-scala-tests,jmh-tests,gs-collections-code-generator-ant,gs-collections-code-generator-maven-plugin,collections-api,gs-collections-forkjoin,serialization-tests,memory-tests"
 patch -R run_ekstazi.sh < patch_gs.txt
 read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
 checkKey "$response"
 
-./run_ekstazi.sh -u "http://svn.apache.org/repos/asf/chukwa/trunk/" -p "chukwa" -s "2.13"
+./run_ekstazi.sh -u "https://github.com/apache/tika" -p "tika" -s "2.15"
 read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
 checkKey "$response"
+
+
+#./run_ekstazi.sh -u "http://svn.apache.org/repos/asf/chukwa/trunk/" -p "chukwa" -s "2.13"
+#read -r -p "Do you want to continue and run ekstazi_parser on next project? [y/N] " response
+#checkKey "$response"
 
 ################ List of Other Projects Not Supported #########################
 ################ You can uncomment these lines to run these projects
