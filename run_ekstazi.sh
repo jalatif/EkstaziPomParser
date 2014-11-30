@@ -16,7 +16,7 @@ git_project="0"
 surefire_version="0.0"
 modules="."
 clean_all="false"
-project_revision="0"
+project_revisions="0"
 max_depth="-1"
 
 while getopts ":u:p:v:s:m:r:d:c:h" opt; do
@@ -42,7 +42,7 @@ while getopts ":u:p:v:s:m:r:d:c:h" opt; do
    	  modules=(${OPTARG//,/ })
       ;; 
 	r)
-	  project_revision="${OPTARG}"
+	  project_revisions=(${OPTARG//,/ })
 	  ;;
 	d)
 	  max_depth="${OPTARG}"
@@ -65,6 +65,8 @@ if [ "$clean_all" == "true" ]; then
 		echo -n "Deleting project folder and configurations: "
 		rm -rvf ".${pname}_clone"
 		rm -rvf ${pname}
+		rm -rvf "ek_${pname}.log"
+		rm -rvf "ekstazi_parser_log_${pname}.log"
 	done
 	exit 0;
 fi
@@ -98,6 +100,14 @@ for index in "${!modules[@]}"
 do
     echo -n "${modules[index]},"
 done
+echo ''
+
+echo -n "Running on revisions = "
+for index in "${!project_revisions[@]}"
+do
+    echo -n "${project_revisions[index]},"
+done
+
 echo ''
 echo "================================="
 
@@ -139,23 +149,67 @@ if [ ! -d "${project}" ]; then
        exit 1
 fi
 
+
+log_file="${cwd}/ek_${project}.log"
+debug_log_file="${cwd}/ekstazi_parser_log_${project}.log"
+
+echo "" > ${log_file}
+echo "" > ${debug_log_file}
+
 cd ${project}
 
-if [ "$project_revision" != "0" ]; then
-	echo "Changing revision to $project_revision"
-	if [ $git_project -eq "0" ]; then
-		git checkout $project_revision
+mvn install -DskipTests
+
+for pro_index in "${!project_revisions[@]}"
+do
+	pro_revision=${project_revisions[pro_index]}
+
+	echo '' | tee -a ${log_file}
+
+	if [ "$pro_revision" != "0" ]; then
+		echo "Changing revision to $pro_revision" | tee -a ${log_file}
+		if [ $git_project -eq "0" ]; then
+			git reset --hard $pro_revision
+			#git checkout $pro_revision
+		else
+			svn up -r"${proj_revision}"
+		fi
 	else
-		svn up -r"${project_revision}"
+		echo "Using latest revision" | tee -a ${log_file}
+		if [ $git_project -eq "0" ]; then
+			git checkout
+		else
+			svn up
+		fi
 	fi
-else
-	echo "Using latest revision"
-	if [ $git_project -eq "0" ]; then
-		git checkout
-	else
-		svn up
-	fi
-fi
+
+
+	
+	for index in "${!modules[@]}"
+	
+	do
+		echo "In Module ${modules[index]}," | tee -a ${log_file}
+		
+		cd ${cwd}/${project}/${modules[index]}
+		
+		#echo "${cwd}/${project}/${modules[$index]}" 
+		
+		if [ $surefire_check -eq "1" ]; then
+			java -jar ${cwd}/pom_parser.jar "${cwd}/${project}/${modules[$index]}" "${max_depth}" "${version}" | tee -a ${debug_log_file}
+		else
+			java -jar ${cwd}/pom_parser.jar "${cwd}/${project}/${modules[$index]}" "${max_depth}" "${version}" "${surefire_version}" | tee -a ${debug_log_file}	
+		fi
+	    
+		${cwd}/test_ekstazi.sh "${cwd}/${project}/${modules[$index]}"  "${log_file}"
+		
+		cd ${cwd}/${project}
+	
+	done
+
+done
+cd ${cwd}
+
+
 
 #rm -rf pom.xml
 #
@@ -175,28 +229,3 @@ fi
 # Install Ekstazi
 #mvn install:install-file -Dfile=org.ekstazi.core-${version}.jar -DgroupId=org.ekstazi -DartifactId=org.ekstazi.core -Dversion=${version} -Dpackaging=jar -DlocalRepositoryPath=$HOME/.m2/repository/
 #mvn install:install-file -Dfile=ekstazi-maven-plugin-${version}.jar -DgroupId=org.ekstazi -DartifactId=ekstazi-maven-plugin -Dversion=${version} -Dpackaging=jar -DlocalRepositoryPath=$HOME/.m2/repository/
-
-mvn install -DskipTests
-
-for index in "${!modules[@]}"
-
-do
-	echo "In Module ${modules[index]},"
-	
-	cd ${cwd}/${project}/${modules[index]}
-	
-	#echo "${cwd}/${project}/${modules[$index]}" 
-	
-	if [ $surefire_check -eq "1" ]; then
-		java -jar ${cwd}/pom_parser.jar "${cwd}/${project}/${modules[$index]}" "${max_depth}" "${version}"	
-	else
-		java -jar ${cwd}/pom_parser.jar "${cwd}/${project}/${modules[$index]}" "${max_depth}" "${version}" "${surefire_version}" 	
-	fi
-    
-	${cwd}/test_ekstazi.sh "${cwd}/${project}/${modules[$index]}"
-	
-	cd ${cwd}/${project}
-
-done
-
-cd ${cwd}
