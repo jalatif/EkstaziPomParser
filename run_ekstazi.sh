@@ -65,8 +65,8 @@ if [ "$clean_all" == "true" ]; then
 		echo -n "Deleting project folder and configurations: "
 		rm -rvf ".${pname}_clone"
 		rm -rvf ${pname}
-		rm -rvf "ek_${pname}.log"
-		rm -rvf "ekstazi_parser_log_${pname}.log"
+		#rm -rvf "ek_${pname}.log"
+		#rm -rvf "ekstazi_parser_log_${pname}.log"
 	done
 	exit 0;
 fi
@@ -136,6 +136,9 @@ if [ ! -d "${clone_project_dir}" ]; then
 		echo "Try if it's an svn project"
 		svn co ${project_url} ${project} 2> /dev/null
 	fi
+	cd ${project}
+	mvn install -DskipTests
+	cd ${cwd}
 	cp -r ${project} ${clone_project_dir} 2> /dev/null
 else
 	rm -rf ${project}
@@ -183,6 +186,8 @@ do
 		fi
 	fi
 
+	#find ./ -iname "*pom.xml*" -exec sed -i 's/^\s*<forkMode/<\!-- <forkMode/g' {} \;
+	#find ./ -iname "*pom.xml*" -exec sed -i 's/<\/forkMode>\s*$/<\/forkMode> -->/g' {} \;
 
 	
 	for index in "${!modules[@]}"
@@ -199,6 +204,8 @@ do
 		else
 			java -jar ${cwd}/pom_parser.jar "${cwd}/${project}/${modules[$index]}" "${max_depth}" "${version}" "${surefire_version}" | tee -a ${debug_log_file}	
 		fi
+
+		#cp ${cwd}/${project}/pom.xml_orig ${cwd}/${project}/pom.xml
 	    
 		${cwd}/test_ekstazi.sh "${cwd}/${project}/${modules[$index]}"  "${log_file}"
 		
