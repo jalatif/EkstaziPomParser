@@ -1,3 +1,4 @@
+package EkIntegration;
 
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
@@ -28,9 +29,7 @@ public class PomParser {
 
     public static void main(String args[]) {
 
-        String path = "/home/manshu/Templates/EXEs/CS527SE/Homework/hw7/temp_ekstazi/continuum";
-        //path = "/home/manshu/Templates/EXEs/CS527SE/Homework/hw7/temp_ekstazi/cucumber/needle";
-        path = "/home/manshu/Templates/EXEs/CS527SE/Homework/hw7/temp_ekstazi/cucumber";
+        String path = "";
 
         String ek_version = "4.2.0";
         String surefire_version = "2.13";
@@ -38,35 +37,37 @@ public class PomParser {
         int max_depth = -1;
 
         if (args.length > 0)
-            path = args[0];
+            path = args[0]; // path of the project
         if (args.length > 1){
             try{
-                max_depth = Integer.parseInt(args[1]);
+                max_depth = Integer.parseInt(args[1]); // depth till which pom is modified
             } catch (NumberFormatException nfe){
                 System.out.println("Wrong parameter");
                 System.exit(99);
             }
         }
         if (args.length > 2)
-            ek_version = args[2];
+            ek_version = args[2]; // passed ekstazi version
         if (args.length > 3){
-            surefire_version = args[3];
-            surefire_force = true;
+            surefire_version = args[3]; // passed surefire version
+            surefire_force = true; // Set surefire force true
         }
 
+        // create ListDir and PomParser objects
         ListDir ld = new ListDir();
         PomParser pp = new PomParser();
 
         try {
+            // get all the pom files in the path
             ArrayList<String> poms = ld.ListDir(path, max_depth);
+            // for each pom call the queryPom which modifies the pom.xml and writes it.
             for (String pom_path : poms) {
                 System.out.print("File : " + pom_path + ", ");
                 pp.queryPom(pom_path, ek_version, surefire_version, surefire_force, path);
                 System.out.println();
             }
-
         } catch (NullPointerException e) {
-            //e.printStackTrace();
+            e.printStackTrace();
             System.out.println("Some configuration is not valid. Check path or other parameters");
         } catch (SAXException e) {
             e.printStackTrace();
@@ -79,16 +80,16 @@ public class PomParser {
         }
     }
 
+    // Inserts the myExcludes tag in the configuration tag
     private void insertExcludesFile(Node configuration_node, String project_path)
     {
         //String path = xml_file_path.substring(0, xml_file_path.lastIndexOf("/"));
         Element excElement = doc.createElement("excludesFile");
-        excElement.appendChild(doc.createTextNode("${java.io.tmpdir}/myExcludes"))
-
-        ;//project_path + "/myExcludes"));
+        excElement.appendChild(doc.createTextNode("${java.io.tmpdir}/myExcludes"));
         configuration_node.appendChild(excElement);
     }
 
+    // Adds Surefire Version, if passed forcefully use that otherwise 2.13 if nothing passed
     private void addSureFireVersion(Node surefire_node, boolean surefire_force, String surefire_new_version){
         Element versionNode = doc.createElement("version");
         if (!surefire_force)
@@ -97,6 +98,8 @@ public class PomParser {
             versionNode.appendChild(doc.createTextNode(surefire_new_version));
         surefire_node.appendChild(versionNode);
     }
+
+    // insert dependency tag block of ekstazi inside dependencies tag
     private void insertDependency(Node node){
 
         Element dInsert0 = doc.createElement("dependency");
@@ -115,6 +118,7 @@ public class PomParser {
 
     }
 
+    // inserts plugin node to the build tag
     private void insertBuild(Node node){
         //Element build = doc.createElement("build");
         Element plugins = doc.createElement("plugins");
@@ -123,6 +127,7 @@ public class PomParser {
         node.insertBefore(plugins, node.getFirstChild());
     }
 
+    // inserts the surefire version if it is not present
     private void insertSurefire(Node plugins)
     {
         Element plugin = doc.createElement("plugin");
@@ -137,6 +142,7 @@ public class PomParser {
         plugin.appendChild(configuration);
     }
 
+    // insert ekstazi plugin above the surefire node mentioning its internal tags according to the passed version
     private void insertPlugin(Node surefire_node)
     {
         Element toInsert = doc.createElement("plugin");
@@ -193,27 +199,32 @@ public class PomParser {
         surefire_node.getParentNode().insertBefore(toInsert, surefire_node);
     }
 
+    // Returns node from the xml according to the given search expression
     private Node getNode(String search_expression) throws XPathException {
         Node node = (Node) xpath.evaluate(search_expression, doc, XPathConstants.NODE);
         return node;
     }
 
+    // Returns value of node according to the given search expression
     private String getNodeValue(String search_expression) throws XPathException {
         String node_val = (String) xpath.evaluate(search_expression, doc, XPathConstants.STRING);
         return node_val;
     }
 
+    // Returns list of nodes whose path in the xml matches the given search expression
     private NodeList getNodeList(String search_expression) throws XPathException {
         NodeList nodelist = (NodeList) xpath.evaluate(search_expression, doc, XPathConstants.NODESET);
         return nodelist;
     }
 
+    // write the modified document dom structure into xml
     private void writeXml(){
         //////////////////////////////////////////////////////////////////
         //Write out the final xml file again into the same pom.xml file//
         /////////////////////////////////////////////////////////////////
         TransformerFactory tFactory = TransformerFactory.newInstance();
         Transformer transformer = null;
+        // set the output xml configurations like indentation
         try {
             transformer = tFactory.newTransformer();
             transformer.setOutputProperty(OutputKeys.INDENT, "yes");
@@ -223,13 +234,18 @@ public class PomParser {
             // transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
             doc.setXmlStandalone(true);
 
+            // if wants to keep original file as backup
             //FileUtils.copyFile(new File(xml_file), new File(xml_file+"_orig"));
 
+            // Write a temporary xml on the disk which may not be the minimal file
             DOMSource source = new DOMSource(doc);
             String modified_xml_file = xml_file.substring(0, xml_file.lastIndexOf("/") + 1) + "ekstazi_" + xml_file.substring(xml_file.lastIndexOf("/") + 1);
             StreamResult _result = new StreamResult(modified_xml_file);
             transformer.transform(source, _result);
+
+            // Compare that modified file with the original file to get the minimal diff
             boolean minimized = MinimizeDiff.MinimizeDiff(xml_file, modified_xml_file);
+            // if minimized then delete the temporary file
             if (!minimized){
                 File foriginal = new File(xml_file);
                 File fmodified = new File(modified_xml_file);
@@ -238,6 +254,7 @@ public class PomParser {
                 File fmodified = new File(modified_xml_file);
                 FileUtils.forceDelete(fmodified);
             }
+
         } catch (TransformerConfigurationException e) {
             e.printStackTrace();
         } catch (TransformerException e) {
@@ -248,7 +265,8 @@ public class PomParser {
 
     }
 
-
+    // Queries nodes of the pom xml structure to find which components need to modified or where ekstazi specific
+    // settings are to be inserted.
     public boolean queryPom(String xml_file, String ekstazi_version, String surefire_new_version, boolean surefire_force, String project_path) throws ParserConfigurationException, IOException, XPathException, SAXException {
 
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -257,22 +275,32 @@ public class PomParser {
         this.xml_file = xml_file;
         this.expr = null;
         this.xFactory = XPathFactory.newInstance();
-        this.doc = builder.parse(xml_file);
+        try{
+            // parse the xml file and load into document dom structure.
+            this.doc = builder.parse(xml_file);
+        } catch (Exception e){
+            // Error in parsing. Malformed POM
+            e.printStackTrace();
+            System.out.println("Craaaaaaaaash");
+            return false;
+        }
         this.doc.getDocumentElement().normalize();
         this.xpath = xFactory.newXPath();
 
+        // check if build is present, if not present create one node for build
         Node build = getNode("/project/build");
         if(build == null) {
             System.out.println("Build Not Present !!");
             Node project_node = getNode("/project");
             Node project_artifact_node = getNode("/project/artifactId");
             Element build_node = doc.createElement("build");
-            if (project_artifact_node.getNextSibling() != null){
+            if (project_artifact_node != null && project_artifact_node.getNextSibling() != null){
                 project_node.insertBefore(build_node, project_artifact_node.getNextSibling());
                 insertBuild(build_node);
             }
         }
         else {
+            // check if plugins node is present in whole pom, if not create one node for plugins inside build/plugins
             Node plugins = getNode("/project/build/plugins|/project/build/pluginManagement/plugins");
             if (plugins == null){
                 insertBuild(build);
@@ -281,158 +309,188 @@ public class PomParser {
             else
                 System.out.println("Plugins Present");
         }
-        Node plugins_node = getNode("/project/build/plugins/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/artifactId/text()");
-        Node pluginsM_node = getNode("/project/build/pluginManagement/plugins/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/artifactId/text()");
 
-        String plugin_path = "/project/build/plugins";
-        String pluginM_path = "/project/build/pluginManagement/plugins";
+        // get all the nodes of surefire plugin
+        NodeList surefire_plugins_node = getNodeList("//plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]");
+        ArrayList<String> surefire_plugin_paths = new ArrayList<String>();
 
-        if (plugins_node == null) {
-            if (pluginsM_node != null){
-                plugins_node = pluginsM_node;
-                plugin_path = pluginM_path;
+        // For each surefire ocurrence, trace back the xslt path to the root node to find its exact location as search expression
+        for (int n = 0; n < surefire_plugins_node.getLength(); n++){
+            Node current_node = surefire_plugins_node.item(n);
+            String surefire_node_path = "";
+            while (current_node.getParentNode() != null){
+                //System.out.println("Surefire address = " + current_node.getNodeName());
+                current_node = current_node.getParentNode();
+                if (current_node.getParentNode() != null)
+                    surefire_node_path = "/" + current_node.getNodeName() + surefire_node_path;
             }
+            if (surefire_plugin_paths.contains(surefire_node_path))
+                continue;
+            surefire_plugin_paths.add(surefire_node_path);
+            System.out.println(surefire_node_path);
         }
+        System.out.println("Num surefires = " + surefire_plugins_node.getLength());
 
-        NodeList nodes = getNodeList(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/artifactId/text()");
-        NodeList surefire_plugin = nodes;
-        System.out.print("Surefire : " + (nodes.getLength() != 0) + " ");
+        // if no surefire is there, then create an empty entry
+        if (surefire_plugin_paths.size() == 0)
+            surefire_plugin_paths.add("");
 
-        NodeList ekstazi_plugin = (NodeList) getNodeList(plugin_path + "/plugin[artifactId[contains(text(), 'ekstazi-maven-plugin')]]/artifactId/text()");
-        System.out.print(" Ekstazi Plugin Present : " + (ekstazi_plugin.getLength() != 0) + ", ");
+        // Loop the whole program for each surefire occurrence
+        for (String plugin_path : surefire_plugin_paths) {
+            System.out.println();
+            System.out.println("\nUsing surefire path = " + plugin_path);
+            NodeList nodes = getNodeList(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/artifactId/text()");
+            NodeList surefire_plugin = nodes;
+            System.out.print("Surefire : " + (nodes.getLength() != 0) + " ");
 
-        Node surefire_node = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]");
+            NodeList ekstazi_plugin = getNodeList(plugin_path + "/plugin[artifactId[contains(text(), 'ekstazi-maven-plugin')]]/artifactId/text()");
+            System.out.print(" Ekstazi Plugin Present : " + (ekstazi_plugin.getLength() != 0) + ", ");
 
-        if(surefire_node == null)
-        {
-            Node plugins = getNode(plugin_path);
-//            if(plugins == null)
-//                plugins = getNode("/project/build/pluginManagement/plugins");
-//
-//            if(plugins == null)
-//                plugins = getNode("/project/build/pluginManagement");
+            Node surefire_node = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]");
 
-            if(plugins != null)
-                insertSurefire(plugins);
+            // if the surefire plugin is not there then create a new one
+            if (surefire_node == null) {
+                Node plugins = getNode("/project/build/plugins");
+                String plugin_new_path = "/project/build/plugins";
+                if(plugins == null){
+                    plugins = getNode("/project/build/pluginManagement/plugins");
+                    plugin_new_path = "/project/build/pluginManagement/plugins";
+                }
+                if(plugins == null){
+                    plugins = getNode("/project/build/pluginManagement");
+                    plugin_new_path = "/project/build/pluginManagement";
+                }
 
-            surefire_node = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]");
-        }
+                if (plugins != null)
+                    insertSurefire(plugins);
 
-        if (surefire_node != null){
-            String surefire_version = getNodeValue(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/version");
-            if (!surefire_version.equals("")){
-                try {
-                    double version = Double.parseDouble(surefire_version);
-                    //if (version <= 2.10 || version > 2.2) {
-                    if (!surefire_force){
-                        if (version < 2.13) {
-                            System.out.println("\nVersion not supported = " + surefire_new_version);
-                            Node version_node = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/version");
-                            version_node.setTextContent(surefire_version);
-                            System.out.println("Surfire version upgraded to " + surefire_new_version);
+                plugin_path = plugin_new_path;
+                surefire_node = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]");
+            }
+
+
+            // Check the version of surefire plugin, if its < 2.13 set it equal to 2.13
+            // or if user has forcefully passed the version, then use that one
+            if (surefire_node != null) {
+                String surefire_version = getNodeValue(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/version");
+                if (!surefire_version.equals("")) {
+                    try {
+                        double version = Double.parseDouble(surefire_version);
+                        //if (version <= 2.10 || version > 2.2) {
+                        if (!surefire_force) {
+                            if (version < 2.13) {
+                                System.out.println("\nVersion not supported = " + surefire_version);
+                                Node version_node = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/version");
+                                version_node.setTextContent(surefire_new_version);
+                                System.out.println("Surfire version upgraded to " + surefire_new_version);
+                            } else {
+                                System.out.println("\nVersion Supported = " + surefire_version);
+                            }
                         } else {
-                            System.out.println("\nVersion Supported = " + surefire_version);
+                            System.out.println("\nPrevious Version = " + surefire_version);
+                            Node version_node = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/version");
+                            version_node.setTextContent(surefire_new_version);
+                            System.out.println("Surfire version forcefully upgraded to " + surefire_new_version);
                         }
-                    }else{
-                        System.out.println("\nPrevious Version = " + surefire_version);
-                        Node version_node = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/version");
-                        version_node.setTextContent(surefire_new_version);
-                        System.out.println("Surfire version forcefully upgraded to " + surefire_new_version);
-                    }
-                }
-                catch(NumberFormatException ex)
-                {
-                    if (surefire_force) {
-                        System.out.println("\nPrevious Version = " + surefire_version);
-                        Node version_node = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/version");
-                        version_node.setTextContent(surefire_new_version);
-                        System.out.println("Surefire version forcefully upgraded to " + surefire_new_version);
-                    }
+                    } catch (NumberFormatException ex) {
+                        if (surefire_force) {
+                            System.out.println("\nPrevious Version = " + surefire_version);
+                            Node version_node = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/version");
+                            version_node.setTextContent(surefire_new_version);
+                            System.out.println("Surefire version forcefully upgraded to " + surefire_new_version);
+                        } else {
+                            System.out.println("Creates variable as version of surefire");
+                        }
 
+                    }
+                } else {
+                    addSureFireVersion(surefire_node, surefire_force, surefire_new_version);
                 }
             }
-            else
-                addSureFireVersion(surefire_node, surefire_force, surefire_new_version);
-        }
 
-        NodeList argline_nodes = getNodeList(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]//argLine");
-        Node argline_node = null;
-        for (int i = 0; i < argline_nodes.getLength(); i++) {
-            argline_node = argline_nodes.item(i);
-            if (argline_node != null) {
-                System.out.println("ArgLine present in this one");
-                String argText = argline_node.getTextContent();
-                if (!argText.contains("${argLine}")) {
-                    argline_node.setTextContent("${argLine} " + argText);
-                    System.out.println("Now argLine content = " + argline_node.getTextContent());
-                } else
-                    System.out.println("No change required");
+            // for all the argLine nodes that occur inside surefire plugin append its text by ${argLine}
+            NodeList argline_nodes = getNodeList(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]//argLine");
+            Node argline_node = null;
+            for (int i = 0; i < argline_nodes.getLength(); i++) {
+                argline_node = argline_nodes.item(i);
+                if (argline_node != null) {
+                    System.out.println("ArgLine present in this one");
+                    String argText = argline_node.getTextContent();
+                    if (!argText.contains("${argLine}")) {
+                        argline_node.setTextContent("${argLine} " + argText);
+                        System.out.println("Now argLine content = " + argline_node.getTextContent());
+                    } else
+                        System.out.println("No change required");
 
-            } else {
-                System.out.println("ArgLine not present");
+                } else {
+                    System.out.println("ArgLine not present");
+                }
             }
-        }
-        //Adding Ekstazi Plugin
-        nodes = getNodeList(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/artifactId/text()");
-        if (nodes.getLength() != 0 && ekstazi_plugin.getLength() == 0) {
-            //expr = xpath.compile("count(/project/build//plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/artifactId/parent::*/preceding-sibling::*) + 1");
-            //result = expr.evaluate(doc, XPathConstants.NUMBER);
-            //System.out.print("at plugin number : " + result + ", ");
 
-            insertPlugin(surefire_node);
-        }
+            // Adds Ekstazi Plugin above the surefire node if its not already there
+            nodes = getNodeList(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/artifactId/text()");
+            if (nodes.getLength() != 0 && ekstazi_plugin.getLength() == 0) {
+                insertPlugin(surefire_node);
+            }
 
-        //Adding dependencies tag and ekstazi dependency
-        NodeList dependencies = getNodeList("/project/dependencies|/project/dependencyManagement/dependencies");
-        System.out.print("Dependencies : " + (dependencies.getLength() != 0) + " ");
+            // Adds dependencies tag and ekstazi dependency in dependencies tag if its not already there
+            NodeList dependencies = getNodeList("/project/dependencies|/project/dependencyManagement/dependencies");
+            System.out.print("Dependencies : " + (dependencies.getLength() != 0) + " ");
 
-        NodeList ekstazi_dependency = getNodeList("/project/dependencies/dependency[artifactId[contains(text(), 'ekstazi-maven-plugin')]]|/project/dependencyManagement/dependencies/dependency[artifactId[contains(text(), 'ekstazi-maven-plugin')]]");
-        System.out.print("Ekstazi Dependency : " + (ekstazi_dependency.getLength() != 0) + " ");
+            NodeList ekstazi_dependency = getNodeList("/project/dependencies/dependency[artifactId[contains(text(), 'ekstazi-maven-plugin')]]|/project/dependencyManagement/dependencies/dependency[artifactId[contains(text(), 'ekstazi-maven-plugin')]]");
+            System.out.print("Ekstazi Dependency : " + (ekstazi_dependency.getLength() != 0) + " ");
 
-        if (dependencies.getLength() == 0){
-            Node project_node = getNode("/project");
-            Node project_artifact_node = getNode("/project/artifactId");
-            Element dependencies_node = doc.createElement("dependencies");
-            if (project_artifact_node.getNextSibling() != null){
-                project_node.insertBefore(dependencies_node, project_artifact_node.getNextSibling());
+            // if it was already there check whether version has changed or not
+            if (ekstazi_dependency.getLength() != 0){
+                String ekVersion = getNodeValue("/project/dependencies/dependency[artifactId[contains(text(), 'ekstazi-maven-plugin')]]/version|/project/dependencyManagement/dependencies/dependency[artifactId[contains(text(), 'ekstazi-maven-plugin')]]/version");
+                System.out.println("Ekstazi Version = " + ekVersion);
+                Node ek_version_node = getNode("/project/dependencies/dependency[artifactId[contains(text(), 'ekstazi-maven-plugin')]]/version|/project/dependencyManagement/dependencies/dependency[artifactId[contains(text(), 'ekstazi-maven-plugin')]]/version");
+                if (!ekVersion.equals(ekstazi_version))
+                    ek_version_node.setTextContent(ekstazi_version);
+            }
+
+            // if dependencies node is not present then create that also and then add ekstazi dependency
+            if (dependencies.getLength() == 0) {
+                Node project_node = getNode("/project");
+                Node project_artifact_node = getNode("/project/artifactId");
+                Element dependencies_node = doc.createElement("dependencies");
+                if (project_artifact_node != null && project_artifact_node.getNextSibling() != null) {
+                    project_node.insertBefore(dependencies_node, project_artifact_node.getNextSibling());
+                    insertDependency(dependencies_node);
+                }
+            } else if (ekstazi_dependency.getLength() == 0) {
+                Node dependencies_node = getNode("/project/dependencies|/project/dependencyManagement/dependencies");
                 insertDependency(dependencies_node);
             }
+
+            // Adds myExcludes tag inside of configuration
+            NodeList excludes_configuration = getNodeList(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/configuration");
+            System.out.print("Excludes : " + (excludes_configuration.getLength() != 0) + " ");
+
+            NodeList excludesFile = getNodeList(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/configuration/excludesFile/text()");
+            System.out.print("ExcludesFile Present : " + (excludesFile.getLength() > 0 && excludesFile.item(0).getNodeValue().equalsIgnoreCase("myExcludes")) + ", ");
+
+            if (surefire_plugin.getLength() != 0 && excludes_configuration.getLength() == 0) {
+                surefire_node = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]");
+                Node artifactId = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/artifactId");
+                Element configuration = doc.createElement("configuration");
+                surefire_node.insertBefore(configuration, artifactId.getNextSibling());
+                insertExcludesFile(configuration, project_path);
+            } else if (excludesFile.getLength() == 0 && excludes_configuration.getLength() != 0) {
+                Node configuration_node = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/configuration");
+                insertExcludesFile(configuration_node, project_path);
+            }
+
+            //Check ArgsLine
+            NodeList argsLine = getNodeList(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/configuration/argLine");
+            System.out.print("ArgLine : " + (argsLine.getLength() != 0) + "");
         }
 
-        else if (ekstazi_dependency.getLength() == 0) {
-            Node dependencies_node = getNode("/project/dependencies|/project/dependencyManagement/dependencies");
-            insertDependency(dependencies_node);
-        }
-
-        //Adding Excludes Configuration
-        NodeList excludes_configuration = getNodeList(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/configuration");
-        System.out.print("Excludes : " + (excludes_configuration.getLength() != 0) + " ");
-
-        NodeList excludesFile = getNodeList(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/configuration/excludesFile/text()");
-        System.out.print("ExcludesFile Present : " + (excludesFile.getLength() > 0 && excludesFile.item(0).getNodeValue().equalsIgnoreCase("myExcludes")) + ", ");
-
-        if(surefire_plugin.getLength() != 0 && excludes_configuration.getLength() == 0)
-        {
-            surefire_node = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]");
-            Node artifactId = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/artifactId");
-            Element configuration = doc.createElement("configuration");
-            surefire_node.insertBefore(configuration,artifactId.getNextSibling());
-            insertExcludesFile(configuration, project_path);
-        }
-        else if(excludesFile.getLength() == 0 && excludes_configuration.getLength() != 0)
-        {
-            Node configuration_node = getNode(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/configuration");
-            insertExcludesFile(configuration_node, project_path);
-        }
-
-        //Check ArgsLine
-        NodeList argsLine = getNodeList(plugin_path + "/plugin[artifactId[contains(text(), 'maven-surefire-plugin')]]/configuration/argLine");
-        System.out.print("ArgLine : " + (argsLine.getLength() != 0) + "");
-
-        //Write to file
+        // Write the modifications to the final file
         writeXml();
 
         return true;
     }
+
 
 }

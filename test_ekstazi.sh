@@ -48,7 +48,7 @@ ek_folders=`find ./ -iname ".ekstazi" -print`
 
 for ekFolder in ${ek_folders}; do
 	if [ -d ${ekFolder} ]; then
-		ekstazi_gen=`ls -ltr ${ekFolder} | wc -l | awk '{if ($1 > 1) print "1"; else print "0";}'`
+		ekstazi_gen=`ls -ltr ${ekFolder} | wc -l | awk '{if ($1 > 3) print "1"; else print "0";}'`
 		#echo -n $ekFolder
 		#echo -n $ekstazi_gen
 		module_name=`echo $ekFolder  | sed -e 's/\/\.ekstazi//g' | sed -e 's/^\.\///g'`
