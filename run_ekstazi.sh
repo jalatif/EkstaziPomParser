@@ -186,9 +186,6 @@ do
 		fi
 	fi
 
-	#find ./ -iname "*pom.xml*" -exec sed -i 's/^\s*<forkMode/<\!-- <forkMode/g' {} \;
-	#find ./ -iname "*pom.xml*" -exec sed -i 's/<\/forkMode>\s*$/<\/forkMode> -->/g' {} \;
-
 	
 	for index in "${!modules[@]}"
 	
@@ -200,13 +197,11 @@ do
 		#echo "${cwd}/${project}/${modules[$index]}" 
 		
 		if [ $surefire_check -eq "1" ]; then
-			java -jar ${cwd}/pom_parser.jar "${cwd}/${project}/${modules[$index]}" "${max_depth}" "${version}" | tee -a ${debug_log_file}
+			java -jar ${cwd}/pom_parser.jar "${cwd}/${project}/${modules[$index]}" "${max_depth}" "${version}" 2>&1 | tee -a ${debug_log_file}
 		else
-			java -jar ${cwd}/pom_parser.jar "${cwd}/${project}/${modules[$index]}" "${max_depth}" "${version}" "${surefire_version}" | tee -a ${debug_log_file}	
+			java -jar ${cwd}/pom_parser.jar "${cwd}/${project}/${modules[$index]}" "${max_depth}" "${version}" "${surefire_version}" 2>&1 | tee -a ${debug_log_file}	
 		fi
 
-		#cp ${cwd}/${project}/pom.xml_orig ${cwd}/${project}/pom.xml
-	    
 		${cwd}/test_ekstazi.sh "${cwd}/${project}/${modules[$index]}"  "${log_file}"
 		
 		cd ${cwd}/${project}
